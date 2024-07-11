@@ -20,19 +20,36 @@ const Tag = require("../models/tag.model");
 
 router.get("/post", async (req, res) => {
   try {
-    const page = parseInt(req.query.page) - 1 || 0;
+    let { sort, page, limit, keyword, tag } = req.query;
 
-    const limit = parseInt(req.query.limit) || 10;
+    page = parseInt(req.query.page) - 1 || 0;
 
+    limit = parseInt(req.query.limit) || 10;
+
+    sort = sort || "-createdAt";
     const search = req.query.search || "";
 
-    const allPost = await Post.find({})
+    const total = await Post.countDocuments();
+
+    const conditions = {};
+    const validOptions = ["page", "limit", "keyword", "tag"];
+    const options = {
+      skip: (page - 1) * limit,
+      limit: limit,
+    };
+
+    if (keyword) {
+      conditions.$or = [
+        { title: { $regex: keyword, $options: "i" } },
+        { description: { $regex: keyword, $options: "i" } },
+      ];
+    }
+
+    const allPost = await Post.find(conditions)
       .where("tags")
 
       .skip(page * limit)
       .limit(limit);
-
-    const total = await Post.countDocuments();
 
     res.status(200).json({
       message: "Success",
